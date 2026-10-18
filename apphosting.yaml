@@ -8,7 +8,7 @@ env:
 
   # Google accounts allowed into the admin panel (comma-separated)
   - variable: ADMIN_EMAILS
-    value: you@example.com
+    value: shuey@chabadcuritiba.com
     availability:
       - RUNTIME
 
