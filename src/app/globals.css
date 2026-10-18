@@ -55,3 +55,98 @@ body {
     @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
   }
 }
+
+/* ---------- first-load intro ---------- */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  cursor: pointer;
+  animation: intro-exit 0.9s cubic-bezier(0.76, 0, 0.24, 1) 2.9s forwards;
+}
+.intro-skip {
+  animation: intro-exit 0.6s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+}
+:root[data-intro="seen"] .intro {
+  display: none;
+}
+
+.intro-logo {
+  font-size: clamp(4rem, 17vw, 13rem);
+  font-weight: 600;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  /* Dim letters with a bright white band that sweeps across them. */
+  background: linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.18) 38%,
+      #fff 50%,
+      rgba(255, 255, 255, 0.18) 62%,
+      rgba(255, 255, 255, 0.18) 100%
+    )
+    no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  animation:
+    intro-in 0.6s ease-out 0.1s forwards,
+    intro-sweep 1.5s cubic-bezier(0.65, 0, 0.35, 1) 0.4s forwards,
+    intro-fill 0.6s ease-out 1.7s forwards;
+}
+.intro-dot {
+  color: rgba(255, 255, 255, 0.35);
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.35);
+}
+
+.intro-tagline {
+  position: absolute;
+  bottom: 12vh;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-geist-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation: intro-rise 0.8s ease-out 1.3s forwards;
+}
+.intro-tagline span {
+  color: #fff;
+}
+
+@keyframes intro-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes intro-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+@keyframes intro-fill {
+  to { -webkit-text-fill-color: #fff; color: #fff; }
+}
+@keyframes intro-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes intro-exit {
+  to { transform: translateY(-100%); visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro { animation: intro-fade 0.4s ease 1.6s forwards; }
+  .intro-logo { animation: none; opacity: 1; color: #fff; -webkit-text-fill-color: #fff; }
+  .intro-tagline { animation: none; opacity: 1; }
+  @keyframes intro-fade { to { opacity: 0; visibility: hidden; } }
+}

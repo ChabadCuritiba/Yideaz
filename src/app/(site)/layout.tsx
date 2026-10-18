@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CartProvider } from "@/components/cart";
 import { SiteHeader } from "@/components/site-header";
+import { Intro } from "@/components/intro";
 
 export default function SiteLayout({ children }: LayoutProps<"/">) {
   return (
     <CartProvider>
+      <Intro />
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <footer className="mt-24 border-t border-line">
