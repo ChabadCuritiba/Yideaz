@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf8;
+  --foreground: #111111;
+  --muted: #6b6b6b;
+  --line: #e6e6e3;
+  --surface: #f1f1ee;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0c0c0c;
+    --foreground: #f2f2f0;
+    --muted: #8f8f8f;
+    --line: #232323;
+    --surface: #161616;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+::selection {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+@layer components {
+  .label {
+    @apply font-mono text-[11px] uppercase tracking-[0.18em] text-muted;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-80 disabled:opacity-40;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-medium transition hover:border-foreground;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-transparent px-4 py-2.5 text-sm outline-none transition placeholder:text-muted focus:border-foreground;
+  }
+  .container-x {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+}
