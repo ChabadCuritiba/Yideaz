@@ -12,7 +12,9 @@ function app(): App {
   // On Firebase App Hosting credentials are automatic. Locally, either set
   // FIREBASE_SERVICE_ACCOUNT_KEY (the JSON key) or use the emulators.
   if (key) return initializeApp({ credential: cert(JSON.parse(key)), storageBucket: bucket });
-  return initializeApp({ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, storageBucket: bucket });
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  // With no options, the Admin SDK reads FIREBASE_CONFIG, which App Hosting sets.
+  return initializeApp(projectId ? { projectId, storageBucket: bucket } : undefined);
 }
 
 export const adminAuth = () => getAuth(app());

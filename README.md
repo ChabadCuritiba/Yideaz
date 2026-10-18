@@ -21,9 +21,8 @@ You need a Firebase project on the **Blaze** plan.
 1. **Authentication**: Build → Authentication → Get started → Sign-in method → enable **Google**.
 2. **Firestore**: Build → Firestore Database → Create database (production mode).
 3. **Storage**: Build → Storage → Get started.
-4. **Web app config**: Project settings → General → Your apps → Add app → Web. Copy the values into `apphosting.yaml` (and into `.env.local` for local development).
-5. **Admins**: put your Google email in `ADMIN_EMAILS` in `apphosting.yaml`. Separate several with commas.
-6. **Security rules**: from this folder run:
+4. **Admins**: put your Google email in `ADMIN_EMAILS` in `apphosting.yaml`. Separate several with commas.
+5. **Security rules**: from this folder run:
    ```bash
    npx firebase login
    npx firebase use --add          # pick your project
@@ -34,10 +33,9 @@ You need a Firebase project on the **Blaze** plan.
 
 1. Push this repo to GitHub.
 2. In the Firebase console go to Build → **App Hosting** → Get started, connect the GitHub repo and choose the branch. Each push now deploys automatically.
-3. Copy your new site address (`https://<backend>--<project>.<region>.hosted.app`):
-   - put it in `SITE_URL` in `apphosting.yaml`
-   - add its domain under Authentication → Settings → **Authorized domains** (needed for Google sign-in)
-   - do the same for any custom domain you connect later
+3. Add your new site's domain (`<backend>--<project>.<region>.hosted.app`) under Authentication → Settings → **Authorized domains**. Google sign-in needs this. Do the same for any custom domain you connect later.
+
+App Hosting supplies your Firebase web config automatically, so there's nothing to copy into `apphosting.yaml` except `ADMIN_EMAILS`.
 
 ## Payments with Asaas
 

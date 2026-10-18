@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { asaasEnabled, createCustomer, createPayment } from "./asaas";
 import { createOrder, getProductsByIds, setOrderPayment, type OrderItem } from "./db";
@@ -39,6 +40,8 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
 
   if (!asaasEnabled()) redirect(`/checkout/success?order=${orderId}`);
 
+  const h = await headers();
+  const site = process.env.SITE_URL || `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
   let invoiceUrl: string;
   try {
     const customer = await createCustomer({ name, email, cpfCnpj });
@@ -47,7 +50,7 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
       value: total / 100,
       description: `Yideaz order ${orderId.slice(0, 8).toUpperCase()}: ${items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}`,
       externalReference: orderId,
-      successUrl: `${process.env.SITE_URL || "http://localhost:3000"}/checkout/success?order=${orderId}`,
+      successUrl: `${site}/checkout/success?order=${orderId}`,
     });
     await setOrderPayment(orderId, payment.id);
     invoiceUrl = payment.invoiceUrl;

@@ -4,26 +4,13 @@ runConfig:
   maxInstances: 2
 
 env:
-  # Firebase web app config (Project settings > Your apps > Web app). Not secret.
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: REPLACE_ME
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: REPLACE_ME.firebaseapp.com
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: REPLACE_ME
-  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: REPLACE_ME.firebasestorage.app
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: REPLACE_ME
+  # Your Firebase web config is provided automatically by App Hosting.
 
   # Google accounts allowed into the admin panel (comma-separated)
   - variable: ADMIN_EMAILS
     value: you@example.com
     availability:
       - RUNTIME
-
-  - variable: SITE_URL
-    value: https://REPLACE_ME.hosted.app
 
   # Asaas payments (Pix, boleto, card). Use "sandbox" while testing.
   - variable: ASAAS_ENV
