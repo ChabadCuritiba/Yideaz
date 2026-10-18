@@ -15,6 +15,14 @@ const storagePath = (f: FormData, k: string, folder: string) => {
   return v.startsWith(`uploads/${folder}/`) ? v : "";
 };
 
+/** Reuses an existing category's spelling so "events" and "Events" don't become two. */
+async function normalizeCategory(raw: string) {
+  const name = raw.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (!name) return "";
+  const existing = (await db.listCategories()).find((c) => c.toLowerCase() === name.toLowerCase());
+  return existing ?? name;
+}
+
 function refresh() {
   revalidatePath("/", "layout");
 }
@@ -29,9 +37,16 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
   if (!media_url) return { error: type === "video" ? "Upload a video or paste a link." : "Choose a photo to upload." };
   if (!/^https?:\/\//.test(media_url)) return { error: "That link doesn’t look right." };
 
-  await db.createPost({ type, title: str(form, "title"), caption: str(form, "caption"), media_url, media_path });
+  const category = await normalizeCategory(str(form, "category"));
+  await db.createPost({ type, title: str(form, "title"), caption: str(form, "caption"), category, media_url, media_path });
   refresh();
   return { ok: true };
+}
+
+export async function setPostCategory(form: FormData) {
+  await requireAdmin();
+  await db.setPostCategory(str(form, "id"), await normalizeCategory(str(form, "category")));
+  refresh();
 }
 
 export async function deletePost(form: FormData) {

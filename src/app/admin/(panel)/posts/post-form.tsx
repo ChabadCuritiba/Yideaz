@@ -48,6 +48,10 @@ export function PostForm() {
       )}
 
       <label className="block">
+        <span className="label">Category</span>
+        <input name="category" list="post-categories" placeholder="e.g. Events — pick one or type a new one" className="input mt-2" />
+      </label>
+      <label className="block">
         <span className="label">Title</span>
         <input name="title" className="input mt-2" />
       </label>

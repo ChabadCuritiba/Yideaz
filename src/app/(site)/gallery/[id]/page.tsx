@@ -20,7 +20,17 @@ export default async function PostPage({ params }: PageProps<"/gallery/[id]">) {
         <PostMedia post={post} />
       </div>
       <div className="mx-auto mt-10 max-w-2xl">
-        <p className="label">{post.type} · {date(post.created_at)}</p>
+        <p className="label">
+          {post.category && (
+            <>
+              <Link href={`/gallery?category=${encodeURIComponent(post.category)}`} className="hover:text-foreground">
+                {post.category}
+              </Link>
+              {" · "}
+            </>
+          )}
+          {post.type} · {date(post.created_at)}
+        </p>
         {post.title && <h1 className="mt-3 text-3xl font-semibold tracking-tight">{post.title}</h1>}
         {post.caption && <p className="mt-4 whitespace-pre-line leading-relaxed text-muted">{post.caption}</p>}
       </div>

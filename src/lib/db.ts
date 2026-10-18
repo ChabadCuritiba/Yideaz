@@ -8,6 +8,8 @@ export type Post = {
   type: "photo" | "video";
   title: string;
   caption: string;
+  /** Optional gallery category, e.g. "Events". */
+  category?: string;
   media_url: string;
   /** Path in Firebase Storage, empty for YouTube/Vimeo links. */
   media_path: string;
@@ -70,11 +72,14 @@ async function logged<T>(what: string, run: () => Promise<T>): Promise<T> {
 
 /* ---------- posts ---------- */
 
-export async function listPosts(opts: { type?: Post["type"]; limit?: number } = {}) {
+export async function listPosts(opts: { type?: Post["type"]; category?: string; limit?: number } = {}) {
   await ready();
   // Filtered in memory so no composite Firestore index is needed.
   const snap = await logged("load posts", () => posts().orderBy("created_at", "desc").get());
-  const all = snap.docs.map((d) => toPlain<Post>(d)).filter((p) => !opts.type || p.type === opts.type);
+  const all = snap.docs
+    .map((d) => toPlain<Post>(d))
+    .filter((p) => !opts.type || p.type === opts.type)
+    .filter((p) => !opts.category || p.category?.toLowerCase() === opts.category.toLowerCase());
   return opts.limit ? all.slice(0, opts.limit) : all;
 }
 
@@ -86,6 +91,22 @@ export async function getPost(id: string) {
 
 export async function createPost(p: Omit<Post, "id" | "created_at">) {
   await posts().add({ ...p, created_at: FieldValue.serverTimestamp() });
+}
+
+/** Distinct post categories, alphabetically. */
+export async function listCategories() {
+  await ready();
+  const snap = await posts().select("category").get();
+  const names = new Map<string, string>();
+  for (const d of snap.docs) {
+    const c = (d.get("category") as string | undefined)?.trim();
+    if (c && !names.has(c.toLowerCase())) names.set(c.toLowerCase(), c);
+  }
+  return [...names.values()].sort((a, b) => a.localeCompare(b));
+}
+
+export async function setPostCategory(id: string, category: string) {
+  await posts().doc(id).update({ category });
 }
 
 /** Deletes a post and returns its Storage path, if any. */

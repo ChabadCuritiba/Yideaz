@@ -1,16 +1,21 @@
 /* eslint-disable @next/next/no-img-element -- uploaded media */
 import Link from "next/link";
-import { listPosts } from "@/lib/db";
+import { listCategories, listPosts } from "@/lib/db";
 import { deletePost } from "@/lib/admin-actions";
 import { date, videoThumb } from "@/lib/format";
 import { ConfirmSubmit } from "@/components/submit";
+import { CategoryField } from "./category-field";
 import { PostForm } from "./post-form";
 
 export default async function AdminPosts() {
-  const posts = await listPosts();
+  const [posts, categories] = await Promise.all([listPosts(), listCategories()]);
 
   return (
     <div className="grid gap-12 lg:grid-cols-[380px_1fr]">
+      {/* Suggestions for every category field on this page */}
+      <datalist id="post-categories">
+        {categories.map((c) => <option key={c} value={c} />)}
+      </datalist>
       <section>
         <h1 className="text-3xl font-semibold tracking-tighter">New post</h1>
         <p className="mt-2 text-sm text-muted">Share a photo or a video to the gallery.</p>
@@ -37,6 +42,7 @@ export default async function AdminPosts() {
                   </Link>
                   <p className="label mt-1">{p.type} · {date(p.created_at)}</p>
                 </div>
+                <CategoryField id={p.id} value={p.category ?? ""} />
                 <form action={deletePost}>
                   <input type="hidden" name="id" value={p.id} />
                   <ConfirmSubmit message="Delete this post?">Delete</ConfirmSubmit>
