@@ -20,3 +20,25 @@ function app(): App {
 export const adminAuth = () => getAuth(app());
 export const firestore = () => getFirestore(app());
 export const bucket = () => getStorage(app()).bucket();
+
+/** Turns common Firebase setup mistakes into a plain-language hint. */
+export function explainFirebaseError(e: unknown) {
+  const err = e as { code?: number | string; message?: string };
+  const msg = err.message ?? String(e);
+  if (/bucket does not exist|bucket name/i.test(msg)) {
+    return "Storage bucket not found. In the Firebase console open Build → Storage and click Get started.";
+  }
+  if (err.code === 5 || /NOT_FOUND/.test(msg)) {
+    return "Firestore database not found. In the Firebase console open Build → Firestore Database and click Create database (Native mode, database ID “(default)”).";
+  }
+  if (err.code === 7 || /PERMISSION_DENIED/.test(msg)) {
+    return "Permission denied. Make sure the Cloud Firestore API is enabled and the App Hosting service account has access to the project.";
+  }
+  if (/Datastore Mode/i.test(msg)) {
+    return "This project's database is in Datastore mode. Yideaz needs Firestore in Native mode.";
+  }
+  if (/project id|projectId/i.test(msg)) {
+    return "Firebase project ID is missing. On App Hosting it is provided automatically; locally set NEXT_PUBLIC_FIREBASE_PROJECT_ID.";
+  }
+  return msg;
+}

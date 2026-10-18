@@ -1,7 +1,7 @@
 import "server-only";
 import { FieldValue, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import { connection } from "next/server";
-import { firestore } from "./firebase/server";
+import { explainFirebaseError, firestore } from "./firebase/server";
 
 export type Post = {
   id: string;
@@ -55,12 +55,23 @@ async function ready() {
   await connection();
 }
 
+// Logs setup problems (missing database, permissions) in plain language,
+// so they're easy to spot in the App Hosting logs.
+async function logged<T>(what: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (e) {
+    console.error(`[yideaz] Could not ${what}: ${explainFirebaseError(e)}`);
+    throw e;
+  }
+}
+
 /* ---------- posts ---------- */
 
 export async function listPosts(opts: { type?: Post["type"]; limit?: number } = {}) {
   await ready();
   // Filtered in memory so no composite Firestore index is needed.
-  const snap = await posts().orderBy("created_at", "desc").get();
+  const snap = await logged("load posts", () => posts().orderBy("created_at", "desc").get());
   const all = snap.docs.map((d) => toPlain<Post>(d)).filter((p) => !opts.type || p.type === opts.type);
   return opts.limit ? all.slice(0, opts.limit) : all;
 }
@@ -87,7 +98,7 @@ export async function deletePost(id: string) {
 
 export async function listProducts(opts: { includeInactive?: boolean; limit?: number } = {}) {
   await ready();
-  const snap = await products().orderBy("created_at", "desc").get();
+  const snap = await logged("load products", () => products().orderBy("created_at", "desc").get());
   const all = snap.docs.map((d) => toPlain<Product>(d)).filter((p) => opts.includeInactive || p.active);
   return opts.limit ? all.slice(0, opts.limit) : all;
 }
