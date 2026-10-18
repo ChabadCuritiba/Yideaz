@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { asaasEnabled, checkAsaas } from "@/lib/asaas";
 import { adminAuth, bucket, explainFirebaseError, firestore } from "@/lib/firebase/server";
 
 type Check = { ok: boolean; detail?: string };
@@ -36,6 +37,13 @@ export async function GET() {
     adminEmails: {
       ok: !!process.env.ADMIN_EMAILS && !/example\.com/.test(process.env.ADMIN_EMAILS),
       detail: process.env.ADMIN_EMAILS ? undefined : "ADMIN_EMAILS is not set in apphosting.yaml.",
+    },
+    asaas: asaasEnabled()
+      ? await check(checkAsaas)
+      : { ok: true, detail: "not set up yet — orders are saved as pending" },
+    asaasWebhook: {
+      ok: !asaasEnabled() || !!process.env.ASAAS_WEBHOOK_TOKEN,
+      detail: process.env.ASAAS_WEBHOOK_TOKEN ? "token set" : "ASAAS_WEBHOOK_TOKEN not set (boleto payments won't be marked paid automatically)",
     },
   };
   const ok = Object.values(checks).every((c) => c.ok);

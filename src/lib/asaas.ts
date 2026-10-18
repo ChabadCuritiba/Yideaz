@@ -69,6 +69,21 @@ export async function createPayment(p: {
   }
 }
 
+/** Checks the API key against the configured environment. Returns a short status line. */
+export async function checkAsaas() {
+  const key = process.env.ASAAS_API_KEY ?? "";
+  const env = process.env.ASAAS_ENV === "production" ? "production" : "sandbox";
+  // Asaas keys are marked _prod_ (live) or _hmlg_ (sandbox).
+  if (env === "sandbox" && key.includes("_prod_")) {
+    throw new AsaasError("This is a production Asaas key but ASAAS_ENV is “sandbox”. Set ASAAS_ENV to “production” in apphosting.yaml.");
+  }
+  if (env === "production" && key.includes("_hmlg_")) {
+    throw new AsaasError("This is a sandbox Asaas key but ASAAS_ENV is “production”. Set ASAAS_ENV to “sandbox” in apphosting.yaml.");
+  }
+  await asaas("/customers?limit=1");
+  return `connected (${env})`;
+}
+
 export function getPayment(id: string) {
   return asaas<Payment>(`/payments/${encodeURIComponent(id)}`);
 }
