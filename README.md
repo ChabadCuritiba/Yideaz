@@ -3,7 +3,7 @@
 A minimalist website for posting **videos and photos**, with a built-in **e‑shop** and an **admin panel** you sign into with **Continue with Google**. Runs entirely on **Firebase**.
 
 - **Gallery**: photos, uploaded videos, and YouTube/Vimeo links, filterable by type
-- **Shop**: products with images and stock, plus a cart and checkout (Stripe is optional)
+- **Shop**: products with images and stock, plus a cart and checkout through **Asaas** (Pix, boleto or card)
 - **Admin panel** (`/admin`): add or delete posts; add, edit, hide or delete products; manage orders
 - Light and dark mode follow the visitor's system setting
 
@@ -39,17 +39,22 @@ You need a Firebase project on the **Blaze** plan.
    - add its domain under Authentication → Settings → **Authorized domains** (needed for Google sign-in)
    - do the same for any custom domain you connect later
 
-## Payments (optional)
+## Payments with Asaas
 
-Without Stripe, checkout saves orders as **pending** and you follow up with the customer yourself.
+At checkout the customer enters their name, email and CPF/CNPJ, then pays on Asaas's payment page with **Pix, boleto or card**. Prices are in reais (R$). Without an Asaas key, checkout still works: orders are saved as **pending** and you follow up with the customer yourself.
 
-To take card payments:
+1. **Test first in the sandbox.** Create an account at sandbox.asaas.com and copy the API key from Integrations. Store it:
+   ```bash
+   npx firebase apphosting:secrets:set asaas-api-key
+   ```
+   Then uncomment `ASAAS_API_KEY` in `apphosting.yaml`, keeping `ASAAS_ENV: sandbox`.
+2. **Send customers back after paying.** In Asaas, register your site's domain under My account → Company info (Minha Conta → Informações). Asaas only redirects customers back to a registered domain. Without it, payments still work, but customers stay on the Asaas page after paying.
+3. **Webhook (recommended).** Boleto payments can take days, so let Asaas tell the site when money arrives:
+   - In Asaas go to Integrations → Webhooks → Add. URL: `https://<your-site>/api/asaas/webhook`. Events: **Payment received** and **Payment confirmed**. Make up a long random **auth token**.
+   - Store that token: `npx firebase apphosting:secrets:set asaas-webhook-token`, then uncomment `ASAAS_WEBHOOK_TOKEN` in `apphosting.yaml`.
+4. **Go live.** Repeat with your production Asaas account's key and webhook, and set `ASAAS_ENV: production`.
 
-```bash
-npx firebase apphosting:secrets:set stripe-secret-key       # paste sk_live_...
-```
-
-Then uncomment the `STRIPE_SECRET_KEY` lines in `apphosting.yaml`. To mark orders paid even if a customer closes the tab after paying, add a Stripe webhook for `checkout.session.completed` pointing at `https://<your-site>/api/stripe/webhook`, store its signing secret as `stripe-webhook-secret`, and uncomment `STRIPE_WEBHOOK_SECRET`.
+Orders show as **paid** in the admin panel once Asaas confirms the payment, and stock goes down automatically.
 
 ## Using the admin panel
 

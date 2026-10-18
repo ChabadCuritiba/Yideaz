@@ -1,7 +1,6 @@
-export const CURRENCY = (process.env.NEXT_PUBLIC_CURRENCY || process.env.CURRENCY || "usd").toUpperCase();
-
-export function money(cents: number, currency = CURRENCY) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+// Asaas charges in Brazilian reais.
+export function money(cents: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
 export function date(iso: string) {

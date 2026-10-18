@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPost } from "@/lib/admin-actions";
 import { Submit } from "@/components/submit";
+import { useFormAction } from "@/components/use-form-action";
 import { FileUpload } from "@/components/file-upload";
 
 export function PostForm() {
-  const [state, action] = useActionState(createPost, {});
+  const [state, onSubmit, pending] = useFormAction(createPost, {});
   const [type, setType] = useState<"photo" | "video">("photo");
   const [busy, setBusy] = useState(false);
   // Remount the form after each successful post to clear it.
@@ -18,7 +19,7 @@ export function PostForm() {
   }, [state]);
 
   return (
-    <form key={`${formKey}-${type}`} action={action} className="mt-8 space-y-4">
+    <form key={`${formKey}-${type}`} onSubmit={onSubmit} className="mt-8 space-y-4">
       <div className="grid grid-cols-2 gap-1 rounded-full border border-line p-1 text-sm">
         {(["photo", "video"] as const).map((t) => (
           <label
@@ -57,7 +58,7 @@ export function PostForm() {
 
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
       {state.ok && <p className="text-sm text-muted">Posted.</p>}
-      <Submit pendingText="Publishing…" disabled={busy}>{busy ? "Uploading…" : "Publish"}</Submit>
+      <Submit pendingText="Publishing…" pending={pending} disabled={busy}>{busy ? "Uploading…" : "Publish"}</Submit>
     </form>
   );
 }

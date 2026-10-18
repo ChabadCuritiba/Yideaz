@@ -7,16 +7,20 @@ export function Submit({
   pendingText = "Saving…",
   className = "btn",
   disabled,
+  pending,
 }: {
   children: React.ReactNode;
   pendingText?: string;
   className?: string;
   disabled?: boolean;
+  /** Pass when the form submits through onSubmit rather than a form action. */
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const busy = pending ?? status.pending;
   return (
-    <button className={className} disabled={pending || disabled}>
-      {pending ? pendingText : children}
+    <button className={className} disabled={busy || disabled}>
+      {busy ? pendingText : children}
     </button>
   );
 }

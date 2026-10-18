@@ -24,18 +24,21 @@ env:
 
   - variable: SITE_URL
     value: https://REPLACE_ME.hosted.app
-  - variable: CURRENCY
-    value: usd
 
-  # Optional Stripe payments. Create the secrets first with:
-  #   npx firebase apphosting:secrets:set stripe-secret-key
-  #   npx firebase apphosting:secrets:set stripe-webhook-secret
+  # Asaas payments (Pix, boleto, card). Use "sandbox" while testing.
+  - variable: ASAAS_ENV
+    value: sandbox
+    availability:
+      - RUNTIME
+  # Create the secrets first with:
+  #   npx firebase apphosting:secrets:set asaas-api-key
+  #   npx firebase apphosting:secrets:set asaas-webhook-token
   # then uncomment:
-  # - variable: STRIPE_SECRET_KEY
-  #   secret: stripe-secret-key
+  # - variable: ASAAS_API_KEY
+  #   secret: asaas-api-key
   #   availability:
   #     - RUNTIME
-  # - variable: STRIPE_WEBHOOK_SECRET
-  #   secret: stripe-webhook-secret
+  # - variable: ASAAS_WEBHOOK_TOKEN
+  #   secret: asaas-webhook-token
   #   availability:
   #     - RUNTIME

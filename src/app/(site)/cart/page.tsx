@@ -2,14 +2,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 import { useCart } from "@/components/cart";
+import { useFormAction } from "@/components/use-form-action";
 import { checkout } from "@/lib/checkout";
 import { money } from "@/lib/format";
 
 export default function CartPage() {
   const { lines, subtotal, setQty } = useCart();
-  const [state, action, pending] = useActionState(checkout, {});
+  const [state, onSubmit, pending] = useFormAction(checkout, {});
 
   if (lines.length === 0) {
     return (
@@ -45,7 +45,7 @@ export default function CartPage() {
           ))}
         </ul>
 
-        <form action={action} className="h-fit space-y-3 rounded-2xl border border-line p-6">
+        <form onSubmit={onSubmit} className="h-fit space-y-3 rounded-2xl border border-line p-6">
           <div className="mb-4 flex justify-between text-lg">
             <span>Subtotal</span>
             <span className="tabular-nums">{money(subtotal)}</span>
@@ -53,9 +53,11 @@ export default function CartPage() {
           <input type="hidden" name="cart" value={JSON.stringify(lines.map(({ productId, quantity }) => ({ productId, quantity })))} />
           <input name="name" required placeholder="Full name" className="input" autoComplete="name" />
           <input name="email" type="email" required placeholder="Email" className="input" autoComplete="email" />
+          <input name="cpfCnpj" required inputMode="numeric" placeholder="CPF or CNPJ" className="input" />
           <textarea name="address" rows={3} placeholder="Shipping address" className="input resize-none" autoComplete="street-address" />
           {state.error && <p className="text-sm text-red-500">{state.error}</p>}
           <button className="btn w-full" disabled={pending}>{pending ? "Processing…" : "Checkout"}</button>
+          <p className="text-center text-xs text-muted">Pay with Pix, boleto or card</p>
         </form>
       </div>
     </div>

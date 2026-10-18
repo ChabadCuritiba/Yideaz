@@ -36,7 +36,8 @@ export type Order = {
   items: OrderItem[];
   total_cents: number;
   status: "pending" | "paid" | "shipped" | "cancelled";
-  stripe_session_id: string | null;
+  /** Asaas charge id, when paid through Asaas. */
+  payment_id: string | null;
   created_at: string;
 };
 
@@ -141,14 +142,14 @@ export async function createOrder(o: Pick<Order, "name" | "email" | "address" | 
   const ref = await orders().add({
     ...o,
     status: "pending",
-    stripe_session_id: null,
+    payment_id: null,
     created_at: FieldValue.serverTimestamp(),
   });
   return ref.id;
 }
 
-export async function setOrderStripeSession(id: string, sessionId: string) {
-  await orders().doc(id).update({ stripe_session_id: sessionId });
+export async function setOrderPayment(id: string, paymentId: string) {
+  await orders().doc(id).update({ payment_id: paymentId });
 }
 
 export async function setOrderStatus(id: string, status: Order["status"]) {

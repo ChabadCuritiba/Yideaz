@@ -1,9 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import Stripe from "stripe";
-import { createOrder, getProductsByIds, setOrderStripeSession, type OrderItem } from "./db";
-import { CURRENCY } from "./format";
+import { asaasEnabled, createCustomer, createPayment } from "./asaas";
+import { createOrder, getProductsByIds, setOrderPayment, type OrderItem } from "./db";
 
 export type CheckoutState = { error?: string };
 
@@ -11,6 +10,7 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
   const name = String(form.get("name") ?? "").trim();
   const email = String(form.get("email") ?? "").trim();
   const address = String(form.get("address") ?? "").trim();
+  const cpfCnpj = String(form.get("cpfCnpj") ?? "").replace(/\D/g, "");
   let requested: { productId: string; quantity: number }[];
   try {
     requested = JSON.parse(String(form.get("cart") ?? "[]"));
@@ -18,6 +18,9 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
     return { error: "Your cart could not be read." };
   }
   if (!name || !email.includes("@")) return { error: "Please enter your name and a valid email." };
+  if (asaasEnabled() && cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+    return { error: "Please enter a valid CPF or CNPJ." };
+  }
 
   // Prices and stock always come from the database, never from the browser.
   const products = await getProductsByIds(requested.map((r) => String(r.productId)));
@@ -34,22 +37,23 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
   const total = items.reduce((n, i) => n + i.price_cents * i.quantity, 0);
   const orderId = await createOrder({ name, email, address, items, total_cents: total });
 
-  if (!process.env.STRIPE_SECRET_KEY) redirect(`/checkout/success?order=${orderId}`);
+  if (!asaasEnabled()) redirect(`/checkout/success?order=${orderId}`);
 
-  const site = process.env.SITE_URL || "http://localhost:3000";
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer_email: email,
-    client_reference_id: String(orderId),
-    metadata: { orderId: String(orderId) },
-    line_items: items.map((i) => ({
-      quantity: i.quantity,
-      price_data: { currency: CURRENCY.toLowerCase(), unit_amount: i.price_cents, product_data: { name: i.name } },
-    })),
-    success_url: `${site}/checkout/success?order=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${site}/cart`,
-  });
-  await setOrderStripeSession(orderId, session.id);
-  redirect(session.url!);
+  let invoiceUrl: string;
+  try {
+    const customer = await createCustomer({ name, email, cpfCnpj });
+    const payment = await createPayment({
+      customer: customer.id,
+      value: total / 100,
+      description: `Yideaz order ${orderId.slice(0, 8).toUpperCase()}: ${items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}`,
+      externalReference: orderId,
+      successUrl: `${process.env.SITE_URL || "http://localhost:3000"}/checkout/success?order=${orderId}`,
+    });
+    await setOrderPayment(orderId, payment.id);
+    invoiceUrl = payment.invoiceUrl;
+  } catch (e) {
+    console.error("Asaas checkout failed", e);
+    return { error: (e as Error).message || "Payment could not be started. Please try again." };
+  }
+  redirect(invoiceUrl);
 }

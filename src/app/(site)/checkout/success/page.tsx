@@ -1,13 +1,21 @@
 import Link from "next/link";
-import { getOrder } from "@/lib/db";
+import { asaasEnabled, getPayment, PAID_STATUSES } from "@/lib/asaas";
+import { getOrder, markOrderPaid } from "@/lib/db";
 import { money } from "@/lib/format";
-import { confirmStripeSession } from "@/lib/stripe-sync";
 import { ClearCart } from "./clear-cart";
 
 export default async function Success({ searchParams }: PageProps<"/checkout/success">) {
-  const { order: orderId, session_id } = await searchParams;
-  if (typeof session_id === "string") await confirmStripeSession(session_id).catch(() => false);
-  const order = await getOrder(typeof orderId === "string" ? orderId : "");
+  const { order: orderId } = await searchParams;
+  let order = await getOrder(typeof orderId === "string" ? orderId : "");
+
+  // Check with Asaas in case the webhook hasn't arrived yet.
+  if (order?.status === "pending" && order.payment_id && asaasEnabled()) {
+    const payment = await getPayment(order.payment_id).catch(() => null);
+    if (payment && PAID_STATUSES.includes(payment.status)) {
+      await markOrderPaid(order.id);
+      order = { ...order, status: "paid" };
+    }
+  }
 
   return (
     <div className="container-x max-w-xl pt-24 text-center">
@@ -17,7 +25,9 @@ export default async function Success({ searchParams }: PageProps<"/checkout/suc
       <p className="mt-6 text-muted">
         {order?.status === "paid"
           ? `Your payment of ${money(order.total_cents)} was received. A confirmation is on its way to ${order.email}.`
-          : "We’ve received your order and will be in touch shortly to complete it."}
+          : order?.payment_id
+            ? "We’ve received your order. As soon as your payment is confirmed (Pix is instant, boleto can take up to 3 business days) we’ll get it ready."
+            : "We’ve received your order and will be in touch shortly to complete it."}
       </p>
       <Link href="/" className="btn-ghost mt-10">Back home</Link>
     </div>

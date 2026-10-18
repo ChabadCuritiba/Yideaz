@@ -1,14 +1,15 @@
 /* eslint-disable @next/next/no-img-element -- uploaded media */
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createProduct, updateProduct } from "@/lib/admin-actions";
 import type { Product } from "@/lib/db";
 import { Submit } from "@/components/submit";
+import { useFormAction } from "@/components/use-form-action";
 import { FileUpload } from "@/components/file-upload";
 
 export function ProductForm({ product }: { product?: Product }) {
-  const [state, action] = useActionState(product ? updateProduct : createProduct, {});
+  const [state, onSubmit, pending] = useFormAction(product ? updateProduct : createProduct, {});
   const [busy, setBusy] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -18,7 +19,7 @@ export function ProductForm({ product }: { product?: Product }) {
   }, [state]);
 
   return (
-    <form key={formKey} action={action} className="mt-8 space-y-4">
+    <form key={formKey} onSubmit={onSubmit} className="mt-8 space-y-4">
       {product && <input type="hidden" name="id" value={product.id} />}
       <label className="block">
         <span className="label">Name</span>
@@ -53,7 +54,7 @@ export function ProductForm({ product }: { product?: Product }) {
       </label>
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
       {state.ok && <p className="text-sm text-muted">Product added.</p>}
-      <Submit disabled={busy}>{busy ? "Uploading…" : product ? "Save changes" : "Add product"}</Submit>
+      <Submit pending={pending} disabled={busy}>{busy ? "Uploading…" : product ? "Save changes" : "Add product"}</Submit>
     </form>
   );
 }
