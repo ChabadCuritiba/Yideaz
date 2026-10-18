@@ -49,42 +49,97 @@ async function asaas<T>(path: string, init?: { method?: string; body?: unknown }
   return data as T;
 }
 
-export function createCustomer(c: { name: string; email: string; cpfCnpj: string }) {
+export function createCustomer(c: {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  mobilePhone?: string;
+  postalCode?: string;
+  addressNumber?: string;
+}) {
   return asaas<{ id: string }>("/customers", { method: "POST", body: { ...c, notificationDisabled: true } });
 }
 
 type Payment = { id: string; status: string; invoiceUrl: string; externalReference?: string };
 
+type Charge = { customer: string; value: number; description: string; externalReference: string };
+
+/** Today's date in Brazil (YYYY-MM-DD), offset by `days`. */
+function dueDate(days = 0) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(Date.now() + days * 86400e3);
+}
+
+const chargeBody = (c: Charge, billingType: string, days: number) => ({
+  customer: c.customer,
+  billingType,
+  value: c.value,
+  dueDate: dueDate(days),
+  description: c.description.slice(0, 500),
+  externalReference: c.externalReference,
+});
+
+/** Pix charge; show it on the site with getPixQrCode. */
+export function createPixPayment(c: Charge) {
+  return asaas<Payment>("/payments", { method: "POST", body: chargeBody(c, "PIX", 1) });
+}
+
+export function getPixQrCode(paymentId: string) {
+  return asaas<{ encodedImage: string; payload: string; expirationDate?: string }>(
+    `/payments/${encodeURIComponent(paymentId)}/pixQrCode`,
+  );
+}
+
+export type CardInput = {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+};
+
+export type CardHolder = {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone: string;
+};
+
 /**
- * Creates a charge the customer pays on Asaas's hosted page (Pix, boleto or card).
- * `successUrl` sends them back after paying; Asaas only accepts it when the site's
- * domain is registered in the Asaas account, so we retry without it if refused.
+ * Charges a credit card straight away. Card details go to Asaas and are never
+ * stored or logged here. Throws AsaasError with Asaas's reason if declined.
  */
-export async function createPayment(p: {
-  customer: string;
-  value: number;
-  description: string;
-  externalReference: string;
-  successUrl: string;
-}) {
-  const due = new Date(Date.now() + 3 * 86400e3).toISOString().slice(0, 10);
-  const body = {
-    customer: p.customer,
-    billingType: "UNDEFINED",
-    value: p.value,
-    dueDate: due,
-    description: p.description.slice(0, 500),
-    externalReference: p.externalReference,
-  };
-  try {
-    return await asaas<Payment>("/payments", {
-      method: "POST",
-      body: { ...body, callback: { successUrl: p.successUrl, autoRedirect: true } },
-    });
-  } catch (e) {
-    if (!(e instanceof AsaasError)) throw e;
-    return asaas<Payment>("/payments", { method: "POST", body });
+export function createCardPayment(c: Charge, card: CardInput, holder: CardHolder, remoteIp: string) {
+  return asaas<Payment>("/payments", {
+    method: "POST",
+    body: { ...chargeBody(c, "CREDIT_CARD", 0), creditCard: card, creditCardHolderInfo: holder, remoteIp },
+  });
+}
+
+/**
+ * Debit cards need the bank's own confirmation (3-D Secure), which happens on
+ * Asaas's secure page. `successUrl` brings the customer back afterwards; Asaas
+ * only accepts it when the site's domain is registered in the Asaas account.
+ */
+export async function createDebitPayment(c: Charge, successUrl: string) {
+  const attempts = [
+    { ...chargeBody(c, "DEBIT_CARD", 0), callback: { successUrl, autoRedirect: true } },
+    chargeBody(c, "DEBIT_CARD", 0),
+    // Accounts without direct debit-card charges: let the customer pick debit on the page.
+    { ...chargeBody(c, "UNDEFINED", 0), callback: { successUrl, autoRedirect: true } },
+    chargeBody(c, "UNDEFINED", 0),
+  ];
+  let lastError: unknown;
+  for (const body of attempts) {
+    try {
+      return await asaas<Payment>("/payments", { method: "POST", body });
+    } catch (e) {
+      if (!(e instanceof AsaasError)) throw e;
+      lastError = e;
+    }
   }
+  throw lastError;
 }
 
 /** Checks that the API key works. Returns a short status line. */

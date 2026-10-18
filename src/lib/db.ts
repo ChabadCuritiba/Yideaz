@@ -32,12 +32,14 @@ export type Order = {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   address: string;
   items: OrderItem[];
   total_cents: number;
   status: "pending" | "paid" | "shipped" | "cancelled";
   /** Asaas charge id, when paid through Asaas. */
   payment_id: string | null;
+  payment_method?: "pix" | "credit_card" | "debit_card";
   created_at: string;
 };
 
@@ -149,7 +151,9 @@ export async function getOrder(id: string) {
   return doc.exists ? toPlain<Order>(doc) : undefined;
 }
 
-export async function createOrder(o: Pick<Order, "name" | "email" | "address" | "items" | "total_cents">) {
+export async function createOrder(
+  o: Pick<Order, "name" | "email" | "phone" | "address" | "items" | "total_cents" | "payment_method">,
+) {
   const ref = await orders().add({
     ...o,
     status: "pending",

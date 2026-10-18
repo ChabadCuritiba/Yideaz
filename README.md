@@ -3,7 +3,7 @@
 A minimalist website for posting **videos and photos**, with a built-in **e‑shop** and an **admin panel** you sign into with **Continue with Google**. Runs entirely on **Firebase**.
 
 - **Gallery**: photos, uploaded videos, and YouTube/Vimeo links, filterable by type
-- **Shop**: products with images and stock, plus a cart and checkout through **Asaas** (Pix, boleto or card)
+- **Shop**: products with images and stock, plus a cart and checkout through **Asaas** (Pix, credit or debit card)
 - **Admin panel** (`/admin`): add or delete posts; add, edit, hide or delete products; manage orders
 - Light and dark mode follow the visitor's system setting
 
@@ -39,7 +39,11 @@ App Hosting supplies your Firebase web config automatically, so there's nothing 
 
 ## Payments with Asaas
 
-At checkout the customer enters their name, email and CPF/CNPJ, then pays on Asaas's payment page with **Pix, boleto or card**. Prices are in reais (R$). Without an Asaas key, checkout still works: orders are saved as **pending** and you follow up with the customer yourself.
+At checkout the customer enters their details (name, email, CPF/CNPJ, phone, CEP) and picks a payment method:
+
+- **Pix**: the QR code and copia-e-cola code appear on your site, and the page moves on by itself once paid.
+- **Credit card**: entered on your site and charged right away. Card details are passed straight to Asaas and never stored.
+- **Debit card**: the customer confirms with their bank on Asaas's secure page (required for debit cards in Brazil), then returns to your site. Prices are in reais (R$). Without an Asaas key, checkout still works: orders are saved as **pending** and you follow up with the customer yourself.
 
 1. **Test first in the sandbox.** Create an account at sandbox.asaas.com and copy the API key from Integrations. Store it:
    ```bash
