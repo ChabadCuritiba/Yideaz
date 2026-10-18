@@ -103,3 +103,12 @@ export async function updateOrderStatus(form: FormData) {
   if (!(status === "paid" && (await db.markOrderPaid(id)))) await db.setOrderStatus(id, status);
   revalidatePath("/admin/orders");
 }
+
+/** Only cancelled orders can be deleted, so real sales stay on record. */
+export async function deleteOrder(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "id");
+  const order = await db.getOrder(id);
+  if (order?.status === "cancelled") await db.deleteOrder(id);
+  revalidatePath("/admin/orders");
+}

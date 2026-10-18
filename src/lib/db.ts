@@ -167,6 +167,10 @@ export async function setOrderPayment(id: string, paymentId: string) {
   await orders().doc(id).update({ payment_id: paymentId });
 }
 
+export async function deleteOrder(id: string) {
+  await orders().doc(id).delete();
+}
+
 export async function setOrderStatus(id: string, status: Order["status"]) {
   await orders().doc(id).update({ status });
 }
