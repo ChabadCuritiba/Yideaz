@@ -20,7 +20,7 @@ export function IntroOverlay() {
         yideaz<span className="intro-dot">.</span>
       </p>
       <p className="intro-tagline">
-        Need Ideas? <span>Be Yideaz</span>
+        Need Ideas? <span>Get Yideaz</span>
       </p>
     </div>
   );
