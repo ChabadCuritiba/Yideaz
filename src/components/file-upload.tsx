@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { uploadFile } from "@/lib/upload";
+import { uploadErrorMessage, uploadFile } from "@/lib/upload";
 
 /**
  * File picker that uploads to Firebase Storage as soon as a file is chosen,
@@ -36,7 +36,8 @@ export function FileUpload({
       const { url, path } = await uploadFile(file, folder, setProgress);
       setResult({ url, path, type: file.type });
     } catch (err) {
-      setError((err as Error).message || "Upload failed.");
+      console.error("Upload failed", err);
+      setError(uploadErrorMessage(err));
       e.target.value = "";
     } finally {
       setProgress(null);
