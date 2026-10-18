@@ -41,14 +41,14 @@ export default async function Gallery({ searchParams }: PageProps<"/gallery">) {
 
   return (
     <div className="container-x pt-16">
-      <p className="label">Gallery</p>
+      <p className="label">{activeCategory ? "Idea category" : "Gallery"}</p>
       <h1 className="mt-4 text-4xl font-semibold tracking-tighter sm:text-6xl">
-        {activeCategory ?? "Everything, in order."}
+        {activeCategory ?? "Ideas for everything."}
       </h1>
 
       {categories.length > 0 && (
         <div className="-mx-5 mt-10 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-          <Chip href={galleryHref(activeType)} active={!activeCategory}>All categories</Chip>
+          <Chip href={galleryHref(activeType)} active={!activeCategory}>All ideas</Chip>
           {categories.map((c) => (
             <Chip key={c} href={galleryHref(activeType, c)} active={c === activeCategory}>{c}</Chip>
           ))}

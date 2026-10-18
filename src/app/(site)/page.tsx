@@ -8,12 +8,12 @@ export default async function Home() {
   return (
     <>
       <section className="container-x pb-20 pt-24 sm:pt-36">
-        <p className="label">Videos · Photos · Shop</p>
+        <p className="label">Ideas · Videos · Shop</p>
         <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-tighter sm:text-7xl md:text-8xl">
           Ideas, captured<span className="text-muted">.</span>
         </h1>
         <p className="mt-8 max-w-md text-lg text-muted">
-          A quiet space for moving pictures, still frames and a few things worth owning.
+          A place for ideas — videos and photos to spark your next one, and a shop to bring it to life.
         </p>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/gallery" className="btn">Explore the gallery</Link>

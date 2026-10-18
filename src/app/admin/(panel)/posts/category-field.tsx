@@ -11,8 +11,8 @@ export function CategoryField({ id, value }: { id: string; value: string }) {
         name="category"
         defaultValue={value}
         list="post-categories"
-        placeholder="No category"
-        aria-label="Category"
+        placeholder="Idea category"
+        aria-label="Idea category"
         className="w-36 rounded-full border border-transparent bg-transparent px-3 py-1 text-xs text-muted outline-none transition placeholder:text-muted/60 hover:border-line focus:border-foreground focus:text-foreground"
         onBlur={(e) => {
           if (e.currentTarget.value.trim() !== value) e.currentTarget.form?.requestSubmit();

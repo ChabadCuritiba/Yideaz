@@ -18,7 +18,7 @@ export default async function AdminPosts() {
       </datalist>
       <section>
         <h1 className="text-3xl font-semibold tracking-tighter">New post</h1>
-        <p className="mt-2 text-sm text-muted">Share a photo or a video to the gallery.</p>
+        <p className="mt-2 text-sm text-muted">Share an idea as a photo or video.</p>
         <PostForm />
       </section>
 
