@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.emulators
 
 # vercel
 .vercel
@@ -41,5 +42,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local data (SQLite database + uploaded media)
-/data/
+
+# firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

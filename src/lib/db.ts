@@ -1,35 +1,35 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { FieldValue, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import { connection } from "next/server";
-
-export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
+import { firestore } from "./firebase/server";
 
 export type Post = {
-  id: number;
+  id: string;
   type: "photo" | "video";
   title: string;
   caption: string;
   media_url: string;
+  /** Path in Firebase Storage, empty for YouTube/Vimeo links. */
+  media_path: string;
   created_at: string;
 };
 
 export type Product = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price_cents: number;
   image_url: string;
+  image_path: string;
   stock: number;
-  active: number;
+  active: boolean;
   created_at: string;
 };
 
-export type OrderItem = { productId: number; name: string; price_cents: number; quantity: number };
+export type OrderItem = { productId: string; name: string; price_cents: number; quantity: number };
 
 export type Order = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   address: string;
@@ -40,178 +40,146 @@ export type Order = {
   created_at: string;
 };
 
-const globalForDb = globalThis as unknown as { yideazDb?: DatabaseSync };
+const posts = () => firestore().collection("posts");
+const products = () => firestore().collection("products");
+const orders = () => firestore().collection("orders");
 
-function open() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const db = new DatabaseSync(path.join(DATA_DIR, "yideaz.db"));
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS posts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK (type IN ('photo', 'video')),
-      title TEXT NOT NULL DEFAULT '',
-      caption TEXT NOT NULL DEFAULT '',
-      media_url TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      price_cents INTEGER NOT NULL,
-      image_url TEXT NOT NULL DEFAULT '',
-      stock INTEGER NOT NULL DEFAULT 0,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL,
-      address TEXT NOT NULL DEFAULT '',
-      items TEXT NOT NULL,
-      total_cents INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      stripe_session_id TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-  return db;
+function toPlain<T>(doc: DocumentSnapshot): T {
+  const { created_at, ...data } = doc.data()!;
+  return { id: doc.id, ...data, created_at: (created_at as Timestamp | undefined)?.toDate().toISOString() ?? "" } as T;
 }
 
-function db() {
-  globalForDb.yideazDb ??= open();
-  return globalForDb.yideazDb;
-}
-
-// Every read waits for a request so pages always show fresh content
-// instead of whatever was in the database at build time.
-async function read<T>(fn: (d: DatabaseSync) => T): Promise<T> {
+// Every read waits for a request so pages always show fresh content.
+async function ready() {
   await connection();
-  return fn(db());
 }
 
 /* ---------- posts ---------- */
 
-export function listPosts(opts: { type?: Post["type"]; limit?: number } = {}) {
-  return read((d) => {
-    const where = opts.type ? "WHERE type = ?" : "";
-    const params = opts.type ? [opts.type] : [];
-    return d
-      .prepare(`SELECT * FROM posts ${where} ORDER BY id DESC LIMIT ?`)
-      .all(...params, opts.limit ?? -1) as unknown as Post[];
-  });
+export async function listPosts(opts: { type?: Post["type"]; limit?: number } = {}) {
+  await ready();
+  // Filtered in memory so no composite Firestore index is needed.
+  const snap = await posts().orderBy("created_at", "desc").get();
+  const all = snap.docs.map((d) => toPlain<Post>(d)).filter((p) => !opts.type || p.type === opts.type);
+  return opts.limit ? all.slice(0, opts.limit) : all;
 }
 
-export function getPost(id: number) {
-  return read((d) => d.prepare("SELECT * FROM posts WHERE id = ?").get(id) as unknown as Post | undefined);
+export async function getPost(id: string) {
+  await ready();
+  const doc = await posts().doc(id).get();
+  return doc.exists ? toPlain<Post>(doc) : undefined;
 }
 
-export function createPost(p: Pick<Post, "type" | "title" | "caption" | "media_url">) {
-  db()
-    .prepare("INSERT INTO posts (type, title, caption, media_url) VALUES (?, ?, ?, ?)")
-    .run(p.type, p.title, p.caption, p.media_url);
+export async function createPost(p: Omit<Post, "id" | "created_at">) {
+  await posts().add({ ...p, created_at: FieldValue.serverTimestamp() });
 }
 
-export function deletePost(id: number) {
-  const post = db().prepare("SELECT media_url FROM posts WHERE id = ?").get(id) as { media_url: string } | undefined;
-  db().prepare("DELETE FROM posts WHERE id = ?").run(id);
-  return post?.media_url;
+/** Deletes a post and returns its Storage path, if any. */
+export async function deletePost(id: string) {
+  const ref = posts().doc(id);
+  const doc = await ref.get();
+  await ref.delete();
+  return doc.get("media_path") as string | undefined;
 }
 
 /* ---------- products ---------- */
 
-export function listProducts(opts: { includeInactive?: boolean; limit?: number } = {}) {
-  return read(
-    (d) =>
-      d
-        .prepare(`SELECT * FROM products ${opts.includeInactive ? "" : "WHERE active = 1"} ORDER BY id DESC LIMIT ?`)
-        .all(opts.limit ?? -1) as unknown as Product[],
-  );
+export async function listProducts(opts: { includeInactive?: boolean; limit?: number } = {}) {
+  await ready();
+  const snap = await products().orderBy("created_at", "desc").get();
+  const all = snap.docs.map((d) => toPlain<Product>(d)).filter((p) => opts.includeInactive || p.active);
+  return opts.limit ? all.slice(0, opts.limit) : all;
 }
 
-export function getProduct(id: number) {
-  return read((d) => d.prepare("SELECT * FROM products WHERE id = ?").get(id) as unknown as Product | undefined);
+export async function getProduct(id: string) {
+  await ready();
+  const doc = await products().doc(id).get();
+  return doc.exists ? toPlain<Product>(doc) : undefined;
 }
 
-export function getProductsByIds(ids: number[]) {
-  if (ids.length === 0) return [];
-  return db()
-    .prepare(`SELECT * FROM products WHERE active = 1 AND id IN (${ids.map(() => "?").join(",")})`)
-    .all(...ids) as unknown as Product[];
+export async function getProductsByIds(ids: string[]) {
+  const refs = [...new Set(ids)].filter(Boolean).map((id) => products().doc(id));
+  if (refs.length === 0) return [];
+  const docs = await firestore().getAll(...refs);
+  return docs.filter((d) => d.exists).map((d) => toPlain<Product>(d)).filter((p) => p.active);
 }
 
-type ProductInput = Pick<Product, "name" | "description" | "price_cents" | "image_url" | "stock" | "active">;
+export type ProductInput = Omit<Product, "id" | "created_at">;
 
-export function createProduct(p: ProductInput) {
-  db()
-    .prepare("INSERT INTO products (name, description, price_cents, image_url, stock, active) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(p.name, p.description, p.price_cents, p.image_url, p.stock, p.active);
+export async function createProduct(p: ProductInput) {
+  await products().add({ ...p, created_at: FieldValue.serverTimestamp() });
 }
 
-export function updateProduct(id: number, p: ProductInput) {
-  db()
-    .prepare("UPDATE products SET name = ?, description = ?, price_cents = ?, image_url = ?, stock = ?, active = ? WHERE id = ?")
-    .run(p.name, p.description, p.price_cents, p.image_url, p.stock, p.active, id);
+export async function updateProduct(id: string, p: ProductInput) {
+  await products().doc(id).update(p);
 }
 
-export function deleteProduct(id: number) {
-  const row = db().prepare("SELECT image_url FROM products WHERE id = ?").get(id) as { image_url: string } | undefined;
-  db().prepare("DELETE FROM products WHERE id = ?").run(id);
-  return row?.image_url;
+/** Deletes a product and returns its image's Storage path, if any. */
+export async function deleteProduct(id: string) {
+  const ref = products().doc(id);
+  const doc = await ref.get();
+  await ref.delete();
+  return doc.get("image_path") as string | undefined;
 }
 
 /* ---------- orders ---------- */
 
-type OrderRow = Omit<Order, "items"> & { items: string };
-const toOrder = (r: OrderRow): Order => ({ ...r, items: JSON.parse(r.items) });
-
-export function listOrders() {
-  return read((d) => (d.prepare("SELECT * FROM orders ORDER BY id DESC").all() as unknown as OrderRow[]).map(toOrder));
+export async function listOrders() {
+  await ready();
+  const snap = await orders().orderBy("created_at", "desc").get();
+  return snap.docs.map((d) => toPlain<Order>(d));
 }
 
-export function getOrder(id: number) {
-  return read((d) => {
-    const r = d.prepare("SELECT * FROM orders WHERE id = ?").get(id) as unknown as OrderRow | undefined;
-    return r && toOrder(r);
+export async function getOrder(id: string) {
+  await ready();
+  if (!id) return undefined;
+  const doc = await orders().doc(id).get();
+  return doc.exists ? toPlain<Order>(doc) : undefined;
+}
+
+export async function createOrder(o: Pick<Order, "name" | "email" | "address" | "items" | "total_cents">) {
+  const ref = await orders().add({
+    ...o,
+    status: "pending",
+    stripe_session_id: null,
+    created_at: FieldValue.serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function setOrderStripeSession(id: string, sessionId: string) {
+  await orders().doc(id).update({ stripe_session_id: sessionId });
+}
+
+export async function setOrderStatus(id: string, status: Order["status"]) {
+  await orders().doc(id).update({ status });
+}
+
+/** Marks a pending order paid and takes its items out of stock. Returns false if it wasn't pending. */
+export async function markOrderPaid(id: string) {
+  const db = firestore();
+  return db.runTransaction(async (tx) => {
+    const ref = orders().doc(id);
+    const order = await tx.get(ref);
+    if (!order.exists || order.get("status") !== "pending") return false;
+    const items = order.get("items") as OrderItem[];
+    const refs = items.map((i) => products().doc(i.productId));
+    const docs = refs.length ? await tx.getAll(...refs) : [];
+    docs.forEach((doc, i) => {
+      if (doc.exists) tx.update(doc.ref, { stock: Math.max(0, (doc.get("stock") as number) - items[i].quantity) });
+    });
+    tx.update(ref, { status: "paid" });
+    return true;
   });
 }
 
-export function createOrder(o: Pick<Order, "name" | "email" | "address" | "items" | "total_cents">) {
-  const res = db()
-    .prepare("INSERT INTO orders (name, email, address, items, total_cents) VALUES (?, ?, ?, ?, ?)")
-    .run(o.name, o.email, o.address, JSON.stringify(o.items), o.total_cents);
-  return Number(res.lastInsertRowid);
-}
-
-export function setOrderStripeSession(id: number, sessionId: string) {
-  db().prepare("UPDATE orders SET stripe_session_id = ? WHERE id = ?").run(sessionId, id);
-}
-
-export function setOrderStatus(id: number, status: Order["status"]) {
-  db().prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
-}
-
-/** Marks an order paid once and decrements stock. Safe to call more than once. */
-export function markOrderPaid(id: number) {
-  const d = db();
-  const res = d.prepare("UPDATE orders SET status = 'paid' WHERE id = ? AND status = 'pending'").run(id);
-  if (res.changes === 0) return false;
-  const row = d.prepare("SELECT items FROM orders WHERE id = ?").get(id) as { items: string };
-  const dec = d.prepare("UPDATE products SET stock = MAX(stock - ?, 0) WHERE id = ?");
-  for (const item of JSON.parse(row.items) as OrderItem[]) dec.run(item.quantity, item.productId);
-  return true;
-}
-
-export function counts() {
-  return read((d) => {
-    const n = (sql: string) => (d.prepare(sql).get() as { n: number }).n;
-    return {
-      posts: n("SELECT COUNT(*) AS n FROM posts"),
-      products: n("SELECT COUNT(*) AS n FROM products"),
-      orders: n("SELECT COUNT(*) AS n FROM orders"),
-      pendingOrders: n("SELECT COUNT(*) AS n FROM orders WHERE status IN ('pending', 'paid')"),
-    };
-  });
+export async function counts() {
+  await ready();
+  const count = async (q: FirebaseFirestore.Query) => (await q.count().get()).data().count;
+  const [p, pr, open] = await Promise.all([
+    count(posts()),
+    count(products()),
+    count(orders().where("status", "in", ["pending", "paid"])),
+  ]);
+  return { posts: p, products: pr, pendingOrders: open };
 }

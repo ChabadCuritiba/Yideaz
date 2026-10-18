@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:emulators": "dotenv -e .env.emulators -- next dev",
+    "emulators": "firebase emulators:start --project demo-yideaz",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage"
   },
   "dependencies": {
+    "firebase": "^13.0.0",
+    "firebase-admin": "^14.5.0",
     "next": "16.4.2",
-    "next-auth": "^5.0.0-beta.32",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
@@ -21,8 +25,10 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "firebase-tools": "^15.34.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

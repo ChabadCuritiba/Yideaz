@@ -6,12 +6,12 @@ import { money } from "@/lib/format";
 import { AddToCart } from "./add-to-cart";
 
 export async function generateMetadata({ params }: PageProps<"/shop/[id]">) {
-  const product = await getProduct(Number((await params).id));
+  const product = await getProduct((await params).id);
   return { title: product?.name || "Product" };
 }
 
 export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
-  const product = await getProduct(Number((await params).id));
+  const product = await getProduct((await params).id);
   if (!product || !product.active) notFound();
 
   return (

@@ -1,12 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    serverActions: {
-      // Admin uploads (photos and videos) go through Server Actions.
-      bodySizeLimit: "500mb",
-    },
-  },
+  serverExternalPackages: ["firebase-admin"],
   turbopack: {
     rules: {
       "*.css": {

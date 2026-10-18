@@ -11,7 +11,7 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
   const name = String(form.get("name") ?? "").trim();
   const email = String(form.get("email") ?? "").trim();
   const address = String(form.get("address") ?? "").trim();
-  let requested: { productId: number; quantity: number }[];
+  let requested: { productId: string; quantity: number }[];
   try {
     requested = JSON.parse(String(form.get("cart") ?? "[]"));
   } catch {
@@ -20,10 +20,10 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
   if (!name || !email.includes("@")) return { error: "Please enter your name and a valid email." };
 
   // Prices and stock always come from the database, never from the browser.
-  const products = getProductsByIds(requested.map((r) => Number(r.productId)));
+  const products = await getProductsByIds(requested.map((r) => String(r.productId)));
   const items: OrderItem[] = [];
   for (const r of requested) {
-    const p = products.find((p) => p.id === Number(r.productId));
+    const p = products.find((p) => p.id === String(r.productId));
     const quantity = Math.floor(Number(r.quantity));
     if (!p || quantity < 1) continue;
     if (quantity > p.stock) return { error: `Only ${p.stock} left of “${p.name}”.` };
@@ -32,7 +32,7 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
   if (items.length === 0) return { error: "Your cart is empty." };
 
   const total = items.reduce((n, i) => n + i.price_cents * i.quantity, 0);
-  const orderId = createOrder({ name, email, address, items, total_cents: total });
+  const orderId = await createOrder({ name, email, address, items, total_cents: total });
 
   if (!process.env.STRIPE_SECRET_KEY) redirect(`/checkout/success?order=${orderId}`);
 
@@ -50,6 +50,6 @@ export async function checkout(_prev: CheckoutState, form: FormData): Promise<Ch
     success_url: `${site}/checkout/success?order=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${site}/cart`,
   });
-  setOrderStripeSession(orderId, session.id);
+  await setOrderStripeSession(orderId, session.id);
   redirect(session.url!);
 }

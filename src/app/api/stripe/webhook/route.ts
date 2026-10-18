@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed" && event.data.object.payment_status === "paid") {
     const orderId = event.data.object.metadata?.orderId;
-    if (orderId) markOrderPaid(Number(orderId));
+    if (orderId) await markOrderPaid(orderId);
   }
   return Response.json({ received: true });
 }

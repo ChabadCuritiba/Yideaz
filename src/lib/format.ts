@@ -5,7 +5,8 @@ export function money(cents: number, currency = CURRENCY) {
 }
 
 export function date(iso: string) {
-  return new Date(iso.replace(" ", "T") + "Z").toLocaleDateString("en-US", {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",

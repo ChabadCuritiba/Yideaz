@@ -1,20 +1,24 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createPost } from "@/lib/admin-actions";
 import { Submit } from "@/components/submit";
+import { FileUpload } from "@/components/file-upload";
 
 export function PostForm() {
   const [state, action] = useActionState(createPost, {});
   const [type, setType] = useState<"photo" | "video">("photo");
-  const formRef = useRef<HTMLFormElement>(null);
+  const [busy, setBusy] = useState(false);
+  // Remount the form after each successful post to clear it.
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
-    if (state.ok) formRef.current?.reset();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset after the action resolves
+    if (state.ok) setFormKey((k) => k + 1);
   }, [state]);
 
   return (
-    <form ref={formRef} action={action} className="mt-8 space-y-4">
+    <form key={`${formKey}-${type}`} action={action} className="mt-8 space-y-4">
       <div className="grid grid-cols-2 gap-1 rounded-full border border-line p-1 text-sm">
         {(["photo", "video"] as const).map((t) => (
           <label
@@ -27,16 +31,13 @@ export function PostForm() {
         ))}
       </div>
 
-      <label className="block">
-        <span className="label">{type === "photo" ? "Photo file" : "Video file"}</span>
-        <input
-          key={type}
-          type="file"
-          name="file"
-          accept={type === "photo" ? "image/*" : "video/mp4,video/webm,video/quicktime"}
-          className="input mt-2 file:mr-3 file:rounded-full file:border-0 file:bg-surface file:px-3 file:py-1 file:text-sm"
-        />
-      </label>
+      <FileUpload
+        name="media"
+        folder="posts"
+        label={type === "photo" ? "Photo file" : "Video file"}
+        accept={type === "photo" ? "image/*" : "video/mp4,video/webm,video/quicktime"}
+        onBusy={setBusy}
+      />
 
       {type === "video" && (
         <label className="block">
@@ -56,7 +57,7 @@ export function PostForm() {
 
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
       {state.ok && <p className="text-sm text-muted">Posted.</p>}
-      <Submit pendingText="Uploading…">Publish</Submit>
+      <Submit pendingText="Publishing…" disabled={busy}>{busy ? "Uploading…" : "Publish"}</Submit>
     </form>
   );
 }

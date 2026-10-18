@@ -8,6 +8,6 @@ export async function confirmStripeSession(sessionId: string) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   if (session.payment_status !== "paid" || !session.metadata?.orderId) return false;
-  markOrderPaid(Number(session.metadata.orderId));
+  await markOrderPaid(session.metadata.orderId);
   return true;
 }

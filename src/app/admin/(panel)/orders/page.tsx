@@ -14,7 +14,7 @@ export default async function AdminOrders() {
           <div key={o.id} className="rounded-2xl border border-line p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="label">#{o.id} · {date(o.created_at)}</p>
+                <p className="label">#{o.id.slice(0, 8).toUpperCase()} · {date(o.created_at)}</p>
                 <p className="mt-2 font-medium">{o.name}</p>
                 <a href={`mailto:${o.email}`} className="text-sm text-muted hover:underline">{o.email}</a>
                 {o.address && <p className="mt-1 whitespace-pre-line text-sm text-muted">{o.address}</p>}

@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- Google avatar */
 import Link from "next/link";
-import { signOut } from "@/auth";
 import { requireAdmin } from "@/lib/admin";
 import { AdminNav } from "./nav";
+import { SignOut } from "./sign-out";
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await requireAdmin();
@@ -19,15 +19,8 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/" className="hidden text-muted hover:text-foreground sm:inline">View site ↗</Link>
-            {user.image && <img src={user.image} alt="" className="h-7 w-7 rounded-full" referrerPolicy="no-referrer" />}
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/admin/login" });
-              }}
-            >
-              <button className="text-muted hover:text-foreground">Sign out</button>
-            </form>
+            {user.picture && <img src={user.picture} alt="" className="h-7 w-7 rounded-full" referrerPolicy="no-referrer" />}
+            <SignOut />
           </div>
         </div>
       </header>

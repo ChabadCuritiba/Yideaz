@@ -2,19 +2,19 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type CartLine = { productId: number; name: string; price_cents: number; image_url: string; quantity: number };
+export type CartLine = { productId: string; name: string; price_cents: number; image_url: string; quantity: number };
 
 type Cart = {
   lines: CartLine[];
   count: number;
   subtotal: number;
   add: (line: Omit<CartLine, "quantity">, qty?: number) => void;
-  setQty: (productId: number, qty: number) => void;
+  setQty: (productId: string, qty: number) => void;
   clear: () => void;
 };
 
 const CartContext = createContext<Cart | null>(null);
-const KEY = "yideaz-cart";
+const KEY = "yideaz-cart-v2";
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);

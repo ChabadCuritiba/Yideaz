@@ -5,12 +5,12 @@ import { date } from "@/lib/format";
 import { PostMedia } from "@/components/media";
 
 export async function generateMetadata({ params }: PageProps<"/gallery/[id]">) {
-  const post = await getPost(Number((await params).id));
+  const post = await getPost((await params).id);
   return { title: post?.title || "Post" };
 }
 
 export default async function PostPage({ params }: PageProps<"/gallery/[id]">) {
-  const post = await getPost(Number((await params).id));
+  const post = await getPost((await params).id);
   if (!post) notFound();
 
   return (

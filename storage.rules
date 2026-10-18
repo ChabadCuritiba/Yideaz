@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Photos, videos and product images are public to view.
+// Only admins (the server sets an `admin` claim for ADMIN_EMAILS) can upload.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /uploads/{folder}/{file} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.token.admin == true
+        && folder in ['posts', 'products']
+        && request.resource.size < 2 * 1024 * 1024 * 1024
+        && request.resource.contentType.matches('(image|video)/.*');
+    }
+  }
+}
