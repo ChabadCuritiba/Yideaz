@@ -1,9 +1,22 @@
 import "server-only";
 
 // Asaas API v3: https://docs.asaas.com
-const BASE =
-  process.env.ASAAS_BASE_URL ||
-  (process.env.ASAAS_ENV === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3");
+const URLS = { production: "https://api.asaas.com/v3", sandbox: "https://api-sandbox.asaas.com/v3" };
+type Env = keyof typeof URLS;
+
+/**
+ * Which Asaas environment the key belongs to. Keys are marked _prod_ (live) or
+ * _hmlg_ (sandbox); older keys without a marker fall back to ASAAS_ENV, and
+ * switch automatically if Asaas says the key belongs to the other one.
+ */
+let detectedEnv: Env | undefined;
+function asaasEnv(): Env {
+  const key = process.env.ASAAS_API_KEY ?? "";
+  if (key.includes("_prod_")) return "production";
+  if (key.includes("_hmlg_")) return "sandbox";
+  return detectedEnv ?? (process.env.ASAAS_ENV === "production" ? "production" : "sandbox");
+}
+const baseUrl = () => process.env.ASAAS_BASE_URL || URLS[asaasEnv()];
 
 export const asaasEnabled = () => !!process.env.ASAAS_API_KEY;
 
@@ -12,8 +25,8 @@ export const PAID_STATUSES = ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"];
 
 export class AsaasError extends Error {}
 
-async function asaas<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await fetch(BASE + path, {
+async function asaas<T>(path: string, init?: { method?: string; body?: unknown }, retried = false): Promise<T> {
+  const res = await fetch(baseUrl() + path, {
     method: init?.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
@@ -26,6 +39,11 @@ async function asaas<T>(path: string, init?: { method?: string; body?: unknown }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const errors = (data.errors ?? []) as { code?: string; description?: string }[];
+    // "A chave de API informada não pertence a este ambiente": try the other environment once.
+    if (!retried && !process.env.ASAAS_BASE_URL && errors.some((e) => /ambiente/i.test(e.description ?? ""))) {
+      detectedEnv = asaasEnv() === "production" ? "sandbox" : "production";
+      return asaas<T>(path, init, true);
+    }
     throw new AsaasError(errors.map((e) => e.description).join(" ") || `Asaas request failed (${res.status})`);
   }
   return data as T;
@@ -69,19 +87,10 @@ export async function createPayment(p: {
   }
 }
 
-/** Checks the API key against the configured environment. Returns a short status line. */
+/** Checks that the API key works. Returns a short status line. */
 export async function checkAsaas() {
-  const key = process.env.ASAAS_API_KEY ?? "";
-  const env = process.env.ASAAS_ENV === "production" ? "production" : "sandbox";
-  // Asaas keys are marked _prod_ (live) or _hmlg_ (sandbox).
-  if (env === "sandbox" && key.includes("_prod_")) {
-    throw new AsaasError("This is a production Asaas key but ASAAS_ENV is “sandbox”. Set ASAAS_ENV to “production” in apphosting.yaml.");
-  }
-  if (env === "production" && key.includes("_hmlg_")) {
-    throw new AsaasError("This is a sandbox Asaas key but ASAAS_ENV is “production”. Set ASAAS_ENV to “sandbox” in apphosting.yaml.");
-  }
   await asaas("/customers?limit=1");
-  return `connected (${env})`;
+  return `connected (${asaasEnv()})`;
 }
 
 export function getPayment(id: string) {

@@ -12,7 +12,8 @@ env:
     availability:
       - RUNTIME
 
-  # Asaas payments (Pix, boleto, card). Use "sandbox" while testing.
+  # Asaas payments (Pix, boleto, card). The site picks production or sandbox
+  # from the API key itself; this is only a fallback for older keys.
   - variable: ASAAS_ENV
     value: sandbox
     availability:
