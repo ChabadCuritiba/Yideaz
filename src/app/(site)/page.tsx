@@ -13,7 +13,7 @@ export default async function Home() {
           Ideas, captured<span className="text-muted">.</span>
         </h1>
         <p className="mt-8 max-w-md text-lg text-muted">
-          A place for ideas — videos and photos to spark your next one, and a shop to bring it to life.
+          A place for Jewish ideas — videos and photos, and a shop to bring it to life.
         </p>
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/gallery" className="btn">Explore the gallery</Link>
